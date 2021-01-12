@@ -5,5 +5,7 @@ Nodejs API Authentication With JWT
 
 #### Instalar as dependencias
 > npm install express
+
 >npm install jsonwebtoken
+
 >npm install -g nodemon
