@@ -7,7 +7,8 @@ const app = express();
 const user = {
     id: 1,
     username: 'adilsonfuta',
-    email: 'adilsonmariafuta@gmail.com'
+    email: 'adilsonmariafuta@gmail.com',
+    password:'olamundo'
 };
 
 app.get('/api', (req, res) => {
@@ -43,7 +44,7 @@ function verificarToken(req, res, next) {
         const  bearer = bearerHeader.split(' ');
         const bearerToken = bearer[1];
         req.token = bearerToken;
-                     console.log(bearerToken)
+        console.log(bearerToken);
         next();
     } else {
         res.sendStatus(403);
