@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='utf-8'>
+  <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+  <title>Teste WSO2</title>
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <style>
+    section {
+      width: 300px;
+      margin: 20px auto;
+      padding: 20px;
+      border: outset 2px;
+    }
+    section > h1 {
+      margin: 0 0 20px 0;
+      text-align: center;
+    }
+    section > form > div {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    section > form > div > label,
+    section > form > div > input {
+      width: 100%;
+    }
+    #msgLayer {
+      color: red;
+      font-size: 1rem;
+    }
+    #response {
+      width: 80%;
+      display: none;
+      word-break: break-all;
+    }
+  </style>
+  <script>
+    var responseToken = null;
+    var responseTokenList = {};
+    function obterToken(form, scope) {
+      var xhttp = new XMLHttpRequest();
+      xhttp.open("POST", "http://localhost:8280/token", true);
+      xhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+      xhttp.setRequestHeader('Authorization', 'Basic bmVqVENCeGhDQ09kWjRnVHNsdGJyUnB6cmlzYTpvUE5aWlYwTXBGTDkzOWxEdjRfUFRBam9McmNh');
+      xhttp.onreadystatechange = () => (xhttp.readyState == 4) && tratarResposta(xhttp, scope);
+      xhttp.send('username='+form.username.value+'&password='+form.password.value+'&grant_type=password&scope=' + scope);
+    }
+
+    function obterTokens(form) {
+      obterToken(form, 'item_view');
+      obterToken(form, 'item_add')
+      obterToken(form, 'order_view')
+      obterToken(form, 'order_add')
+    }
+
+    function tratarResposta(xhttp, scope) {
+      if (xhttp.status == 200) {
+        const contentLayer = document.getElementById("response");
+        const response = JSON.parse(xhttp.responseText);
+        setResponseToken(response, scope);
+        contentLayer.innerHTML = '<ul>'
+        Object.keys(response).forEach(key => {
+          contentLayer.innerHTML += '<li><b>' + key + '</b>: ' + response[key] + '</li>';  
+        });
+        contentLayer.innerHTML += '</ul>';
+        contentLayer.style.display = 'block';
+      } else if (xhttp.status == 401) {
+        document.getElementById("msgLayer").innerHTML = JSON.parse(xhttp.responseText).error_description;
+      } else {
+        document.getElementById("msgLayer").innerHTML = xhttp.responseText;
+      }
+    }
+
+    function enviar(form) {
+      try {
+        obterTokens(form);
+      } catch (error) {
+        console.error(error.message);
+      }
+      return false;
+    }
+
+    function setResponseToken(response, scope) {
+      // responseToken = response;
+      responseTokenList[scope] = response;
+      document.getElementById("listaPedidosBtn").disabled = false;
+      document.getElementById("criaPedidosBtn").disabled = false;
+      document.getElementById("listaItensBtn").disabled = false;
+      document.getElementById("criaItensBtn").disabled = false;
+    }
+
+    function listarPedidos() {
+      var xhttp = new XMLHttpRequest();
+      xhttp.open("GET", "http://localhost:8280/shopping-cart/orders", true);
+      xhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+      xhttp.setRequestHeader('Authorization', 'Bearer ' + responseTokenList['order_view'].access_token);
+      xhttp.onreadystatechange = () => {
+        if (xhttp.readyState == 4) {
+          document.getElementById("retornoPedidos").innerHTML = xhttp.responseText;
+        }
+      };
+      xhttp.send();
+    }
+
+    function criarPedidos() {
+      var xhttp = new XMLHttpRequest();
+      xhttp.open("POST", "http://localhost:8280/shopping-cart/orders", true);
+      xhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+      xhttp.setRequestHeader('Authorization', 'Bearer ' + responseTokenList['order_add'].access_token);
+      xhttp.onreadystatechange = () => {
+        if (xhttp.readyState == 4) {
+          document.getElementById("retornoPedidos").innerHTML = xhttp.responseText;
+        }
+      };
+      xhttp.send();
+    }
+
+    function listarItens() {
+      var xhttp = new XMLHttpRequest();
+      xhttp.open("GET", "http://localhost:8280/shopping-cart/items", true);
+      xhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+      xhttp.setRequestHeader('Authorization', 'Bearer ' + responseTokenList['item_view'].access_token);
+      xhttp.onreadystatechange = () => {
+        if (xhttp.readyState == 4) {
+          document.getElementById("retornoItens").innerHTML = xhttp.responseText;
+        }
+      };
+      xhttp.send();
+    }
+
+    function criarItens() {
+      var xhttp = new XMLHttpRequest();
+      xhttp.open("POST", "http://localhost:8280/shopping-cart/items", true);
+      xhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+      xhttp.setRequestHeader('Authorization', 'Bearer ' + responseTokenList['item_add'].access_token);
+      xhttp.onreadystatechange = () => {
+        if (xhttp.readyState == 4) {
+          document.getElementById("retornoItens").innerHTML = xhttp.responseText;
+        }
+      };
+      xhttp.send();
+    }
+  </script>
+</head>
+<body>
+
+  <section>
+    <h1>Obter Token</h1>
+    <h2 id="msgLayer"></h2>
+    <form onsubmit="return enviar(this);">
+      <div>
+        <label>Usuario:</label>
+        <input type="text" name="username" value="Alex" />
+      </div>
+      <div>
+        <label>Senha:</label>
+        <input type="password" name="password" value="12345" />
+      </div>
+      <br/>
+      <div>
+        <button type="submit">Enviar</button>
+      </div>
+    </form>
+  </section>
+
+  <section id="response"></section>
+
+  <section>
+    <h1>Pedidos</h1>
+    <div>
+      <button disabled="disabled" id="listaPedidosBtn" onclick="listarPedidos();">Listar Pedidos</button>
+    </div>
+    <br />
+    <div>
+      <button disabled="disabled" id="criaPedidosBtn" onclick="criarPedidos();">Criar Pedidos</button>
+    </div>
+    <div id="retornoPedidos"></div>
+  </section>
+
+  <section>
+    <h1>Itens</h1>
+    <div>
+      <button disabled="disabled" id="listaItensBtn" onclick="listarItens();">Listar Itens</button>
+    </div>
+    <br />
+    <div>
+      <button disabled="disabled" id="criaItensBtn" onclick="criarItens();">Criar Itens</button>
+    </div>
+    <div id="retornoItens"></div>
+  </section>
+  
+</body>
+</html>
